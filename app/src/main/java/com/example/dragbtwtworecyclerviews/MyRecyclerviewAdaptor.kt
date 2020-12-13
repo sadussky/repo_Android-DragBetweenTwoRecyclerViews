@@ -5,8 +5,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 
+
+/**
+ * @author Burwei
+ */
 class MyRecyclerviewAdaptor: RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewHolder>() {
 
     // onclick listener interface
@@ -38,8 +43,8 @@ class MyRecyclerviewAdaptor: RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewHo
 
     // Create new views (invoked by the layout manager)
     override fun onCreateViewHolder(
-        parent: ViewGroup,
-        viewType: Int
+            parent: ViewGroup,
+            viewType: Int
     ): MyRecyclerviewAdaptor.MyViewHolder {
         // create a new view
         val item = LayoutInflater.from(parent.context)
@@ -71,5 +76,29 @@ class MyRecyclerviewAdaptor: RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewHo
 
     fun clear() {
         myDataset = mutableListOf<String>()
+    }
+}
+
+/**
+ * @author Burwei
+ */
+class MyItemTouchHelperCallback : ItemTouchHelper.Callback() {
+    override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+        val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
+        val swipeFlags = ItemTouchHelper.START or ItemTouchHelper.END
+        return makeMovementFlags(dragFlags, swipeFlags)
+    }
+
+    override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+        return if(recyclerView.adapter!=null) {
+            recyclerView.adapter!!.notifyItemMoved(viewHolder.adapterPosition, target.adapterPosition)
+            true
+        }else{
+            false
+        }
+    }
+
+    override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+        //
     }
 }
