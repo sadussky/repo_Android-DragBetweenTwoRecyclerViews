@@ -20,7 +20,8 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
     private lateinit var myRecyclerviewRight: RecyclerView
     private lateinit var myRecyclerviewAdaptorRight: MyRecyclerviewAdaptor
     private lateinit var myViewManagerRight: RecyclerView.LayoutManager
-    private val itemTouchHelper = ItemTouchHelper(MyItemTouchHelperCallback())
+    private val itemTouchHelperCallback = MyItemTouchHelperCallback()
+    private val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
     private val testDataLeft = listOf<String>("cat", "dog", "rabbit", "horse", "elephant", "eagle", "bear", "cow", "chicken", "dear")
     private val testDataRight = listOf<String>("fish", "jellyfish", "whale", "turtle", "seahorse", "coral", "octopus", "frog", "screw", "starfish")
 
@@ -31,11 +32,11 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
     ): View? {
         // Inflate the layout for this fragment
         myViewManagerLeft = LinearLayoutManager(activity)
-        myRecyclerviewAdaptorLeft = MyRecyclerviewAdaptor()
-        myRecyclerviewAdaptorLeft.setListener(this)
+        myRecyclerviewAdaptorLeft = MyRecyclerviewAdaptor("left")
+        myRecyclerviewAdaptorLeft.setClickListener(this)
         myViewManagerRight = LinearLayoutManager(activity)
-        myRecyclerviewAdaptorRight = MyRecyclerviewAdaptor()
-        myRecyclerviewAdaptorRight.setListener(this)
+        myRecyclerviewAdaptorRight = MyRecyclerviewAdaptor("right")
+        myRecyclerviewAdaptorRight.setClickListener(this)
         var rootView = inflater
                 .inflate(R.layout.fragment_main, container, false) as View
         myRecyclerviewLeft = rootView.findViewById<RecyclerView>(R.id.recyclerviewLeft)
