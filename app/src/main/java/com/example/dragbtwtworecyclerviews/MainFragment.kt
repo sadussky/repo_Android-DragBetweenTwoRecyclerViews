@@ -22,8 +22,8 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
     private lateinit var myViewManagerRight: RecyclerView.LayoutManager
     private val itemTouchHelperCallback = MyItemTouchHelperCallback()
     private val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
-    private val testDataLeft = listOf<String>("cat", "dog", "rabbit", "horse", "elephant", "eagle", "bear", "cow", "chicken", "dear")
-    private val testDataRight = listOf<String>("fish", "jellyfish", "whale", "turtle", "seahorse", "coral", "octopus", "frog", "screw", "starfish")
+    private val testDataLeft = mutableListOf<Any>("cat", "dog", "rabbit", "horse", "elephant", "eagle", "bear", "cow", "chicken", "dear")
+    private val testDataRight = mutableListOf<Any>("fish", "jellyfish", "whale", "turtle", "seahorse", "coral", "octopus", "frog", "screw", "starfish")
 
 
     override fun onCreateView(
@@ -32,10 +32,10 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
     ): View? {
         // Inflate the layout for this fragment
         myViewManagerLeft = LinearLayoutManager(activity)
-        myRecyclerviewAdaptorLeft = MyRecyclerviewAdaptor("left")
+        myRecyclerviewAdaptorLeft = MyRecyclerviewAdaptor()
         myRecyclerviewAdaptorLeft.setClickListener(this)
         myViewManagerRight = LinearLayoutManager(activity)
-        myRecyclerviewAdaptorRight = MyRecyclerviewAdaptor("right")
+        myRecyclerviewAdaptorRight = MyRecyclerviewAdaptor()
         myRecyclerviewAdaptorRight.setClickListener(this)
         var rootView = inflater
                 .inflate(R.layout.fragment_main, container, false) as View
@@ -70,7 +70,7 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
         super.onStart()
         myRecyclerviewAdaptorLeft.setData(testDataLeft)
         myRecyclerviewAdaptorRight.setData(testDataRight)
-        itemTouchHelper.attachToRecyclerView(myRecyclerviewLeft)
+//        itemTouchHelper.attachToRecyclerView(myRecyclerviewLeft)
     }
 
     override fun recyclerviewClick(name: String) {

@@ -12,16 +12,20 @@ import android.view.*
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.get
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 
 
-class MyRecyclerviewAdaptor(private val recyclerviewName:String) : RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewHolder>() {
+class MyRecyclerviewAdaptor : RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewHolder>() {
 
     // onclick listener interface
     private var clickListener: OnClickListener? = null
-    private var myDataset = listOf<String>()
+    private var myDataset = mutableListOf<Any>()
+    private val dragListener = MyDragListener()
 
     interface OnClickListener {
         fun recyclerviewClick(name: String)
@@ -31,9 +35,50 @@ class MyRecyclerviewAdaptor(private val recyclerviewName:String) : RecyclerView.
         clickListener = parentFragment
     }
 
-    fun setData(data: List<String>) {
+    fun setData(data: MutableList<Any>) {
         myDataset = data
         notifyDataSetChanged()
+    }
+
+    fun getData(): MutableList<Any> {
+        return myDataset
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setDrag(v: ConstraintLayout, position: Int) {
+        var touchedX = 0f  // closure variable
+        var touchedY = 0f  // closure variable
+        v.visibility = View.VISIBLE
+        v.tag = position
+        v.setOnDragListener(dragListener)
+        v.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchedX = event.x
+                    touchedY = event.y
+                }
+            }
+            return@setOnTouchListener false  // leave the touch event to other listeners
+        }
+        v.setOnLongClickListener {
+            it.visibility = View.INVISIBLE
+            val myShadow = MyDragShadowBuilder(it, touchedX.roundToInt(), touchedY.roundToInt())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                it.startDragAndDrop(
+                        null,
+                        myShadow,
+                        it,
+                        0
+                )
+            } else {
+                it.startDrag(
+                        null,
+                        myShadow,
+                        it,
+                        0
+                )
+            }
+        }
     }
 
     // Provide a reference to the views for each data item
@@ -58,55 +103,24 @@ class MyRecyclerviewAdaptor(private val recyclerviewName:String) : RecyclerView.
         return MyViewHolder(item)
     }
 
-
-    @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val name = myDataset[position]
-        var touchedX = 0f
-        var touchedY = 0f
-        holder.txtAnimalName.text = name
+        holder.txtAnimalName.text = name as String
         holder.layoutAnimal.setOnClickListener {
             clickListener?.recyclerviewClick(name)
         }
-        holder.layoutAnimal.tag = "$recyclerviewName/$position/$name"
-        holder.layoutAnimal.setOnDragListener(MyDragListener())
-        holder.layoutAnimal.setOnTouchListener { v, event ->
-            when(event.action){
-                MotionEvent.ACTION_DOWN -> {
-                    touchedX = event.x
-                    touchedY = event.y
-                }
-            }
-            return@setOnTouchListener false  // leave the touch event to other listeners
-        }
-        holder.layoutAnimal.setOnLongClickListener {
-            val item = ClipData.Item(it.tag as? CharSequence)
-            val dragData = ClipData(
-                    it.tag as? CharSequence,
-                    arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
-                    item)
-            val myShadow = MyDragShadowBuilder(it, touchedX.roundToInt(),touchedY.roundToInt())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                it.startDragAndDrop(
-                        dragData,
-                        myShadow,
-                        null,
-                        0
-                )
-            } else {
-                it.startDrag(
-                        dragData,
-                        myShadow,
-                        null,
-                        0
-                )
-            }
-        }
+        setDrag(holder.layoutAnimal, position)
+    }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        recyclerView.setOnDragListener(dragListener)
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
         clickListener = null
+        clear()
     }
 
 
@@ -114,7 +128,7 @@ class MyRecyclerviewAdaptor(private val recyclerviewName:String) : RecyclerView.
     override fun getItemCount() = myDataset.size
 
     fun clear() {
-        myDataset = mutableListOf<String>()
+        myDataset = mutableListOf<Any>()
     }
 }
 
@@ -129,7 +143,6 @@ class MyItemTouchHelperCallback : ItemTouchHelper.Callback() {
     override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
         return if (recyclerView.adapter != null) {
             recyclerView.adapter!!.notifyItemMoved(viewHolder.adapterPosition, target.adapterPosition)
-            println("onMove")
             true
         } else {
             false
@@ -142,11 +155,11 @@ class MyItemTouchHelperCallback : ItemTouchHelper.Callback() {
 }
 
 
-class MyDragShadowBuilder(v: View, private val touchedX:Int, private val touchedY:Int) : View.DragShadowBuilder(v) {
+class MyDragShadowBuilder(v: View, private val touchedX: Int, private val touchedY: Int) : View.DragShadowBuilder(v) {
 
     override fun onProvideShadowMetrics(size: Point, touch: Point) {
         super.onProvideShadowMetrics(size, touch)
-        touch.set(touchedX,touchedY)
+        touch.set(touchedX, touchedY)
     }
 
     override fun onDrawShadow(canvas: Canvas) {
@@ -156,17 +169,73 @@ class MyDragShadowBuilder(v: View, private val touchedX:Int, private val touched
 }
 
 
-class MyDragListener : View.OnDragListener {
+class MyDragListener : View.OnDragListener, CoroutineScope {
+
+    override val coroutineContext: CoroutineContext
+        get() = Job()
+
+    private var sourceValue: Any? = null
+    private var isParentChanged = false
 
     override fun onDrag(v: View?, event: DragEvent?): Boolean {
+        if (v == null || v is RecyclerView) {
+            return true
+        }
         when (event?.action) {
+            DragEvent.ACTION_DRAG_STARTED -> {
+                val sourceView = event.localState as View
+                val sourcePosition = sourceView.tag as Int
+                if (sourceValue == null) {
+                    val sourceParent = sourceView.parent as RecyclerView
+                    sourceValue =
+                            (sourceParent.adapter as MyRecyclerviewAdaptor).getData()[sourcePosition]
+                }
+            }
             DragEvent.ACTION_DRAG_ENTERED -> {
-                println("drag enter, v?.tag=${v?.tag}")
+                val sourceView = event.localState as View
+                val targetPosition = v.tag as Int
+                val sourcePosition = sourceView.tag as Int
+                val targetValue = if(v.parent!= null){
+                        ((v.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor).getData()[targetPosition]
+                }else{
+                    return false
+                }
+                val targetAdaptor = (v.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
+                if (v.parent == sourceView.parent ) {
+                    if(!isParentChanged) {
+                        launch(Dispatchers.Default) {
+                            v.tag = sourcePosition
+                            sourceView.tag = targetPosition
+                            targetAdaptor.getData()[targetPosition] = sourceValue!!
+                            targetAdaptor.getData()[sourcePosition] = targetValue
+                        }
+                        targetAdaptor.notifyItemMoved(sourcePosition, targetPosition)
+                    }
+                } else {
+                    isParentChanged = true
+                }
             }
             DragEvent.ACTION_DROP -> {
-                println("drop, v?.tag=${v?.tag}")
+                if(isParentChanged){
+                    val sourceView = event.localState as View
+                    val targetPosition = v.tag as Int
+                    val sourcePosition = sourceView.tag as Int
+                    val sourceAdaptor = (sourceView.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
+                    val targetAdaptor = (v.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
+                    if(sourcePosition < sourceAdaptor.getData().size) {
+                        sourceAdaptor.getData().removeAt(sourcePosition)
+                    }
+                    targetAdaptor.getData().add(targetPosition, sourceValue!!)
+                }
+            }
+            DragEvent.ACTION_DRAG_ENDED -> {
+                val sourceView = event.localState as View
+                sourceValue = null
+                isParentChanged = false
+                (v.parent as RecyclerView?)?.adapter?.notifyDataSetChanged()
+                (sourceView.parent as RecyclerView?)?.adapter?.notifyDataSetChanged()
             }
         }
-        return true // pass the event to other listener
+        return true
     }
 }
