@@ -192,7 +192,7 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
         when (event?.action) {
             DragEvent.ACTION_DRAG_STARTED -> {
                 val sourceView = event.localState as View
-                if(!isStarted && sourceView.parent != null) {
+                if (!isStarted && sourceView.parent != null) {
                     val sourcePosition = (sourceView.parent as RecyclerView).getChildAdapterPosition(sourceView)
                     initPositionInOriParent = sourcePosition
                     finalPosition = sourcePosition
@@ -216,13 +216,12 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
                     } else {
                         try {
                             targetAdaptor.notifyItemMoved(finalPositionInOriParent, targetPosition)
-                            (finalParent?.adapter as MyRecyclerviewAdaptor?)?.getData()!![finalPosition]
+                            (finalParent?.adapter as MyRecyclerviewAdaptor?)?.getData()!!.removeAt(initPositionInOtherParent)
                             finalParent?.adapter?.notifyDataSetChanged()
                         } catch (e: Exception) {
                             println("ignore index out of bound")
                         }
                         isOriginalParent = true
-                        return true
                     }
                     finalPosition = targetPosition
                     finalPositionInOriParent = targetPosition
@@ -230,10 +229,9 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
                     if (isOriginalParent) {
                         val sourceValue = ((sourceView.parent as RecyclerView).adapter as MyRecyclerviewAdaptor).getData()[initPositionInOriParent]
                         try {
-                            targetAdaptor.getData().add(targetPosition,sourceValue)
+                            targetAdaptor.getData().add(targetPosition, sourceValue)
                             targetAdaptor.notifyDataSetChanged()
-                            (v.parent as RecyclerView)[targetPosition].visibility = View.INVISIBLE
-                            (v.parent as RecyclerView)[targetPosition].invalidate()
+                            (v.parent as RecyclerView)[targetPosition].visibility = View.INVISIBLE  // not working, don't know why
                             initPositionInOtherParent = targetPosition
                         } catch (e: Exception) {
                             println("ignore index out of bound")
@@ -241,7 +239,7 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
                         isOriginalParent = false
                         finalPosition = targetPosition
                     } else {
-                        if(finalPosition!=targetPosition) {
+                        if (finalPosition != targetPosition) {
                             try {
                                 targetAdaptor.notifyItemMoved(finalPosition, targetPosition)
                             } catch (e: Exception) {
