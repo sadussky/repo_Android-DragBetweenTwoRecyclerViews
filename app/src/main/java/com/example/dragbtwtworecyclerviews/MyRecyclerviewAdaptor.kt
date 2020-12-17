@@ -25,7 +25,7 @@ class MyRecyclerviewAdaptor : RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewH
     // onclick listener interface
     private var clickListener: OnClickListener? = null
     private var myDataset = mutableListOf<Any>()
-    private val dragListener = MyDragListener()
+    private var dragListener: MyDragListener? = null
 
     interface OnClickListener {
         fun recyclerviewClick(name: String)
@@ -33,6 +33,10 @@ class MyRecyclerviewAdaptor : RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewH
 
     fun setClickListener(parentFragment: OnClickListener) {
         clickListener = parentFragment
+    }
+
+    fun setDragListener(listener: MyDragListener) {
+        dragListener = listener
     }
 
     fun setData(data: MutableList<Any>) {
@@ -49,7 +53,6 @@ class MyRecyclerviewAdaptor : RecyclerView.Adapter<MyRecyclerviewAdaptor.MyViewH
         var touchedX = 0f  // closure variable
         var touchedY = 0f  // closure variable
         v.visibility = View.VISIBLE
-        v.tag = position
         v.setOnDragListener(dragListener)
         v.setOnTouchListener { v, event ->
             when (event.action) {
@@ -174,9 +177,12 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Job()
 
-    private var sourcePositionInOtherParent = 0
-    private var isParentChanged = false
-    private var finalTargetPosition = 0
+    private var isStarted = false
+    private var isOriginalParent = true
+    private var initPositionInOriParent = 0
+    private var initPositionInOtherParent = 0
+    private var finalPosition = 0
+    private var finalPositionInOriParent = 0
     private var finalParent: RecyclerView? = null
 
     override fun onDrag(v: View?, event: DragEvent?): Boolean {
@@ -186,69 +192,87 @@ class MyDragListener : View.OnDragListener, CoroutineScope {
         when (event?.action) {
             DragEvent.ACTION_DRAG_STARTED -> {
                 val sourceView = event.localState as View
-                val sourcePosition = sourceView.tag as Int
-//                if (sourceValue == null) {
-//                    val sourceParent = sourceView.parent as RecyclerView
-//                    sourceValue =
-//                            (sourceParent.adapter as MyRecyclerviewAdaptor).getData()[sourcePosition]
-                finalTargetPosition = sourcePosition
-//                }
+                if(!isStarted && sourceView.parent != null) {
+                    val sourcePosition = (sourceView.parent as RecyclerView).getChildAdapterPosition(sourceView)
+                    initPositionInOriParent = sourcePosition
+                    finalPosition = sourcePosition
+                    isStarted = true
+                }
             }
             DragEvent.ACTION_DRAG_ENTERED -> {
                 val sourceView = event.localState as View
-                val targetPosition = v.tag as Int
+                if (sourceView.parent == null) {
+                    return true
+                }
                 val targetAdaptor = (v.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
-                finalParent = v.parent as RecyclerView
+                val targetPosition = (v.parent as RecyclerView).getChildAdapterPosition(v)
                 if (v.parent == sourceView.parent) {
-                    if (!isParentChanged) {
-                        targetAdaptor.notifyItemMoved(finalTargetPosition, targetPosition)
-                        finalTargetPosition = targetPosition
-                    }
-                } else {
-                    if (!isParentChanged) {
-                        targetAdaptor.notifyItemInserted(targetPosition)
-                        sourcePositionInOtherParent = targetPosition
+                    if (isOriginalParent) {
+                        try {
+                            targetAdaptor.notifyItemMoved(finalPosition, targetPosition)
+                        } catch (e: Exception) {
+                            println("ignore index out of bound")
+                        }
                     } else {
-                        targetAdaptor.notifyItemMoved(sourcePositionInOtherParent, targetPosition)
-                        sourcePositionInOtherParent = targetPosition
+                        try {
+                            targetAdaptor.notifyItemMoved(finalPositionInOriParent, targetPosition)
+                            (finalParent?.adapter as MyRecyclerviewAdaptor?)?.getData()!![finalPosition]
+                            finalParent?.adapter?.notifyDataSetChanged()
+                        } catch (e: Exception) {
+                            println("ignore index out of bound")
+                        }
+                        isOriginalParent = true
+                        return true
                     }
-                    isParentChanged = true
-                }
-            }
-            DragEvent.ACTION_DROP -> {
-                if (isParentChanged) {
-                    val sourceView = event.localState as View
-                    val targetPosition = v.tag as Int
-                    val sourcePosition = sourceView.tag as Int
-                    val sourceAdaptor = (sourceView.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
-                    val targetAdaptor = (v.parent as RecyclerView).adapter!! as MyRecyclerviewAdaptor
-                    val sourceValue = ((sourceView.parent as RecyclerView).adapter as MyRecyclerviewAdaptor).getData()[sourcePosition]
-                    if (sourcePosition < sourceAdaptor.getData().size) {
-                        sourceAdaptor.getData().removeAt(sourcePosition)
+                    finalPosition = targetPosition
+                    finalPositionInOriParent = targetPosition
+                } else {
+                    if (isOriginalParent) {
+                        val sourceValue = ((sourceView.parent as RecyclerView).adapter as MyRecyclerviewAdaptor).getData()[initPositionInOriParent]
+                        try {
+                            targetAdaptor.getData().add(targetPosition,sourceValue)
+                            targetAdaptor.notifyDataSetChanged()
+                            (v.parent as RecyclerView)[targetPosition].visibility = View.INVISIBLE
+                            (v.parent as RecyclerView)[targetPosition].invalidate()
+                            initPositionInOtherParent = targetPosition
+                        } catch (e: Exception) {
+                            println("ignore index out of bound")
+                        }
+                        isOriginalParent = false
+                        finalPosition = targetPosition
+                    } else {
+                        if(finalPosition!=targetPosition) {
+                            try {
+                                targetAdaptor.notifyItemMoved(finalPosition, targetPosition)
+                            } catch (e: Exception) {
+                                println("ignore index out of bound")
+                            }
+                            finalPosition = targetPosition
+                        }
                     }
-                    targetAdaptor.getData().add(targetPosition, sourceValue!!)
                 }
+                finalParent = v.parent as RecyclerView
             }
             DragEvent.ACTION_DRAG_ENDED -> {
-                if(finalParent!=null){
-                    val sourceView = event.localState as View
-                    val sourcePosition = sourceView.tag as Int
-                    val sourceValue = ((sourceView.parent as RecyclerView).adapter as MyRecyclerviewAdaptor).getData()[sourcePosition]
-                    println(finalParent)
-                    println(sourceView.parent)
-                    println(finalParent!!.adapter)
-                    println(sourceValue)
-                    if (finalParent == sourceView.parent) {
-                        (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().removeAt(sourcePosition)
-                        (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().add(finalTargetPosition, sourceValue)
-                    } else {
-                        //
-                    }
-                    finalParent = null
-                    isParentChanged = false
-                    (v.parent as RecyclerView?)?.adapter?.notifyDataSetChanged()
-                    (sourceView.parent as RecyclerView?)?.adapter?.notifyDataSetChanged()
+                val sourceView = event.localState as View
+                if (finalParent == null || sourceView.parent == null) {
+                    return true
                 }
+                val sourceParent = sourceView.parent as RecyclerView
+                val sourceValue = ((sourceView.parent as RecyclerView).adapter as MyRecyclerviewAdaptor).getData()[initPositionInOriParent]
+                if (finalParent == sourceView.parent) {
+                    (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().removeAt(initPositionInOriParent)
+                    (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().add(finalPosition, sourceValue)
+                } else {
+                    (sourceParent.adapter as MyRecyclerviewAdaptor).getData().removeAt(initPositionInOriParent)
+                    (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().removeAt(initPositionInOtherParent)
+                    (finalParent!!.adapter as MyRecyclerviewAdaptor).getData().add(finalPosition, sourceValue)
+                }
+                (finalParent!!.adapter as MyRecyclerviewAdaptor).notifyDataSetChanged()
+                (sourceView.parent as RecyclerView?)?.adapter?.notifyDataSetChanged()
+                isStarted = false
+                finalParent = null
+                isOriginalParent = true
             }
         }
         return true
