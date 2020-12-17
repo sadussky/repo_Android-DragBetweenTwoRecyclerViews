@@ -9,7 +9,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.get
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 
 /**
