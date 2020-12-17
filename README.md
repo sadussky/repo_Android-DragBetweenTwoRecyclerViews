@@ -2,7 +2,7 @@
 This is a demo of drag and drop items between two RecyclerViews.
 
 ## demo
-<img src="https://imgur.com/qrn0Hbd.gif" width="50%">
+<img src="https://imgur.com/qrn0Hbd.gif" width="40%">
 
 ## Usage
 1. Copy the MyDraggableRecyclerviewAdaptor.kt file to your application.
