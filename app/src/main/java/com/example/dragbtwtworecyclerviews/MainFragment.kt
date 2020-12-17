@@ -20,9 +20,7 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
     private lateinit var myRecyclerviewRight: RecyclerView
     private lateinit var myRecyclerviewAdaptorRight: MyRecyclerviewAdaptor
     private lateinit var myViewManagerRight: RecyclerView.LayoutManager
-    private val itemTouchHelperCallback = MyItemTouchHelperCallback()
     private val dragListener = MyDragListener()
-    private val itemTouchHelper = ItemTouchHelper(itemTouchHelperCallback)
     private val testDataLeft = mutableListOf<Any>("cat", "dog", "rabbit", "horse", "elephant", "eagle", "bear", "cow", "chicken", "dear")
     private val testDataRight = mutableListOf<Any>("fish", "jellyfish", "whale", "turtle", "seahorse", "coral", "octopus", "frog", "screw", "starfish")
 
@@ -73,7 +71,6 @@ class MainFragment : Fragment(), MyRecyclerviewAdaptor.OnClickListener {
         super.onStart()
         myRecyclerviewAdaptorLeft.setData(testDataLeft)
         myRecyclerviewAdaptorRight.setData(testDataRight)
-//        itemTouchHelper.attachToRecyclerView(myRecyclerviewLeft)
     }
 
     override fun recyclerviewClick(name: String) {
